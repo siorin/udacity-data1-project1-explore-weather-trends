@@ -1,0 +1,185 @@
+
+Summary
+
+In this project, you will analyze local and global temperature data and compare the temperature trends where you live to overall global temperature trends.
+
+Instructions
+
+Your goal will be to create a visualization and prepare a write up describing the similarities and differences between global temperature trends and temperature trends in the closest big city to where you live. To do this, you’ll follow the steps below:
+
+    - Extract the data from the database. There's a workspace in the next section that is connected to a database. You’ll need to export the temperature data for the world as well as for the closest big city to where you live. You can find a list of cities and countries in the city_list table. To interact with the database, you'll need to write a SQL query.
+        - Write a SQL query to extract the city level data. Export to CSV.
+        - Write a SQL query to extract the global data. Export to CSV.
+    - Open up the CSV in whatever tool you feel most comfortable using. We suggest using Excel or Google sheets, but you are welcome to use another tool, such as Python or R.
+    - Create a line chart that compares your city’s temperatures with the global temperatures. Make sure to plot the moving average rather than the yearly averages in order to smooth out the lines, making trends more observable (the last concept in the previous lesson goes over how to do this in a spreadsheet).
+    - Make observations about the similarities and differences between the world averages and your city’s averages, as well as overall trends. Here are some questions to get you started.
+        - Is your city hotter or cooler on average compared to the global average? Has the difference been consistent over time?
+        - “How do the changes in your city’s temperatures over time compare to the changes in the global average?”
+        - What does the overall trend look like? Is the world getting hotter or cooler? Has the trend been consistent over the last few hundred years?
+
+Submission
+
+Your submission should be a PDF that includes:
+
+    - An outline of steps taken to prepare the data to be visualized in the chart, such as:
+        - What tools did you use for each step? (Python, SQL, Excel, etc)
+        - How did you calculate the moving average?
+        - What were your key considerations when deciding how to visualize the trends?
+    - Line chart with local and global temperature trends
+    - At least four observations about the similarities and/or differences in the trends
+
+Rubric
+
+A Udacity reviewer will assess your project based on the criteria in the project rubric. Use the rubric as a guide while you complete the project, then give yourself a quick self-assessment before you submit it. 
+
+
+Analysis
+
+Criteria 	Meets Specifications
+
+Student is able to extract data from a database using SQL.
+    The SQL query used to extract the data is included.
+    The query runs without error and pulls the intended data.
+
+Student is able to manipulate data in a spreadsheet or similar tool.
+	Moving averages are calculated to be used in the line chart.
+
+Student is able to create a clear data visualization.
+    A line chart is included in the submission.
+    The chart and its axes have titles, and there's a clear legend (if applicable).
+
+Student is able to interpret a data visualization.
+    The student includes four observations about their provided data visualization.
+    The four observations are accurate.
+
+
+
+Suggestions to Make Your Project Stand Out!
+
+Think about other ways to compare and find insights from this data beyond interpreting the chart. Hear are a few ideas:
+
+    What's the correlation coefficient?
+    Can you estimate the average temperature in your city based on the average global temperature?
+    Multiple cities - Add your favorite cities from around the globe to your visualization. What do you learn about them?
+
+# References
+# https://www.rdocumentation.org/packages/zoo/versions/1.8-3/topics/rollmean
+# http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/
+# http://www.stat.columbia.edu/%7Etzheng/files/Rcolor.pdf
+# https://rmarkdown.rstudio.com/authoring_basics.html
+
+rm(list=ls()) 				# clear working environment
+library(zoo)				# for the rollmean function, 
+library(ggplot2)			# for the plot
+
+# read in files extracted by SQL
+global_data <- read.csv('global_data.csv')
+city_data <- read.csv('city_data.csv')
+
+# check data
+head(global_data)
+head(city_data)
+
+# join the global and city data based on year
+combined <- merge(x = global_data, y = city_data, by = "year", all = TRUE, suffixes = c(".global",".city"))
+
+# compute moving averages of intervals (3, 5, 9, 15) for global temp data
+combined$global_mavg03 <- rollmeanr(combined$avg_temp.global, 3, fill = NA)
+combined$global_mavg05 <- rollmeanr(combined$avg_temp.global, 5, fill = NA)
+combined$global_mavg09 <- rollmeanr(combined$avg_temp.global, 9, fill = NA)
+combined$global_mavg15 <- rollmeanr(combined$avg_temp.global, 15, fill = NA)
+
+# compute moving averages of intervals (3, 5, 9, 15) for city temp data
+combined$city_mavg03 <- rollmeanr(combined$avg_temp.city, 3, fill = NA)
+combined$city_mavg05 <- rollmeanr(combined$avg_temp.city, 5, fill = NA)
+combined$city_mavg09 <- rollmeanr(combined$avg_temp.city, 9, fill = NA)
+combined$city_mavg15 <- rollmeanr(combined$avg_temp.city, 15, fill = NA)
+
+attach(combined)
+
+min(c(global_mavg3, global_mavg5, global_mavg9, global_mavg15), na.rm = TRUE) 	# for the plot axis limits
+max(c(city_mavg3, city_mavg5, city_mavg9, city_mavg15), na.rm = TRUE)			# for the plot axis limits
+
+ggplot(data=combined, aes(x=year)) + 
+  geom_line(aes(y=global_mavg03, colour = "Global Moving Average 03"), size=0.6) + 
+  geom_line(aes(y=global_mavg05, colour = "Global Moving Average 05"), size=0.6) + 
+  geom_line(aes(y=global_mavg09, colour = "Global Moving Average 09"), size=0.6) + 
+  geom_line(aes(y=global_mavg15, colour = "Global Moving Average 15"), size=0.6) + 
+  geom_line(aes(y=city_mavg03, colour = "City Moving Average 03"), size=0.6) + 
+  geom_line(aes(y=city_mavg05, colour = "City Moving Average 05"), size=0.6) + 
+  geom_line(aes(y=city_mavg09, colour = "City Moving Average 09"), size=0.6) + 
+  geom_line(aes(y=city_mavg15, colour = "City Moving Average 15"), size=0.6) + 
+  scale_color_manual(values=c("gold1", "darksalmon", "orangered3", "firebrick",
+  							  "lightblue1", "cadetblue1", "deepskyblue2", "royalblue3"), 
+  							  name="Moving Average Interval") + 
+  scale_x_continuous(breaks=c(1750, 1800, 1850, 1900, 1950, 2000, 2015)) + 
+  scale_y_continuous(limits=c(6, 18), breaks=c(6, 8, 10, 12, 14, 16, 18)) + 
+  labs(x = "Year", y = "Temperature Annual Mean") + 
+  ggtitle("Temperature Annual Means 1750 - 2015: Moving Averages for Global and Local (Los Angeles)")
+
+
+
+
+
+
+
+
+
+
+
+
+?plot
+plot(year, city_mavg3, type="l", main = "title", sub = "subtitle", xlab = "Year", ylab = "Temperature (Moving Average)", col = "red")
+
+# subset of columns of matrix
+combined <- combined[,c(1:3)]
+
+
+Extract data from database
+- Write a SQL query to extract the city level data. Export to CSV.
+    SELECT year, avg_temp
+	FROM city_data
+	WHERE city = 'Los Angeles' AND country = 'United States'
+	ORDER BY year
+
+- Write a SQL query to extract the global data. Export to CSV.
+    SELECT *
+    FROM global_data
+    ORDER BY year
+
+Manipulate data
+Open up the CSV in Excel
+Merge city data and global data into one table joining on 'year'
+
+
+Create a line chart that compares your city’s temperatures with the global temperatures. Make sure to plot the moving average rather than the yearly averages in order to smooth out the lines, making trends more observable 
+        - What tools did you use for each step? (Python, SQL, Excel, etc)
+        - How did you calculate the moving average?
+        - What were your key considerations when deciding how to visualize the trends?
+    The chart and its axes have titles, and there's a clear legend (if applicable).
+
+Make observations about the similarities and differences between the world averages and your city’s averages, as well as overall trends. 
+        - Is your city hotter or cooler on average compared to the global average? Has the difference been consistent over time?
+        - “How do the changes in your city’s temperatures over time compare to the changes in the global average?”
+        - What does the overall trend look like? Is the world getting hotter or cooler? Has the trend been consistent over the last few hundred years?
+    The student includes four observations about their provided data visualization.
+    The four observations are accurate.
+
+
+
+Sys.setenv(PATH = paste(Sys.getenv("PATH"), "CC:\\Users\\siorin\\AppData\\Local\\Programs\\MiKTeX29\\miktex\\bin\\x64\\pdflatex.exe", sep=.Platform$path.sep))
+Sys.which('pdflatex')
+
+
+install.packages('rmarkdown')
+devtools::install_github('yihui/tinytex')
+
+install.packages('tinytex')
+tinytex::install_tinytex()
+tinytex:::is_tinytex()
+
+
+C:\Program Files\wkhtmltopdf\bin>wkhtmltopdf test.html test.pdf
+
+
+
